@@ -326,4 +326,10 @@ input[type=password]:placeholder {
   -ms-transition: all 0.3s ease-in-out;
   -o-transition: all 0.3s ease-in-out;
   transition: all 0.3s ease-in-out;
+} 
+
+.card-img-top{
+  height: 300px;
+  width: auto;
+  object-fit: cover;
 }

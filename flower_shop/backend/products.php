@@ -32,13 +32,6 @@ if (isset($_SESSION['user_id'])) {
 </head>
 <body>
     <h1>Luisgaga Flower Shop</h1>
-    <?php
-    if (isset($_SESSION['user_id']) && $_SESSION['user_id'] !== null) {
-        echo "Logged in as user ID: " . $_SESSION['user_id'];
-    } else {
-        echo "Not logged in";
-    }
-    ?>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>

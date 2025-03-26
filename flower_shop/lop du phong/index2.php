@@ -1,8 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 session_start();
 include 'config.php';
 
@@ -10,56 +6,40 @@ include 'config.php';
 $cart_count = 0;
 if (isset($_SESSION['user_id'])) {
     $stmt = $conn->prepare("SELECT SUM(quantity) AS total FROM cart WHERE user_id = ?");
-    if ($stmt) {
-        $stmt->bind_param("i", $_SESSION['user_id']);
-        $stmt->execute();
-        $cart_count = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
-        $stmt->close();
-    } else {
-        error_log("Lỗi chuẩn bị truy vấn cart: " . $conn->error);
-    }
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $cart_count = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
 }
 
-// Lấy danh sách danh mục từ database
-$categories = [];
+// Lấy danh sách danh mục và sản phẩm từ database
 $categories_query = $conn->query("SELECT category_id, name FROM categories");
-if ($categories_query) {
-    while ($row = $categories_query->fetch_assoc()) {
-        $categories[$row['category_id']] = $row['name'];
-    }
-} else {
-    error_log("Lỗi truy vấn categories: " . $conn->error);
+$categories = [];
+while ($row = $categories_query->fetch_assoc()) {
+    $categories[$row['category_id']] = $row['name'];
 }
 
-// Lấy danh sách sản phẩm
-$products_by_category = [];
 $products_query = $conn->prepare("
     SELECT p.product_id, p.name, p.price, p.image, p.category_id 
     FROM products p 
     WHERE p.stock > 0 
     ORDER BY p.product_id ASC
 ");
-if ($products_query) {
-    $products_query->execute();
-    $products_result = $products_query->get_result();
-    while ($product = $products_result->fetch_assoc()) {
-        $category_id = $product['category_id'] ?? 0; // 0 cho sản phẩm không danh mục
-        $products_by_category[$category_id][] = $product;
-    }
-    $products_query->close();
-} else {
-    error_log("Lỗi chuẩn bị truy vấn products: " . $conn->error);
+$products_query->execute();
+$products_result = $products_query->get_result();
+$products_by_category = [];
+while ($product = $products_result->fetch_assoc()) {
+    $category_id = $product['category_id'] ?? 0; // 0 cho sản phẩm không có danh mục
+    $products_by_category[$category_id][] = $product;
 }
 ?>
 
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luisgaga Flower Shop</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="stylesheet" href="/frontend/css/style.css">
+    <link rel="stylesheet" href="frontend/css/style.css">
 </head>
 <body>
     <h1>Luisgaga Flower Shop</h1>
@@ -71,12 +51,12 @@ if ($products_query) {
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
-                    <button class="logo-img" onclick="window.location.href='/index.php'">
+                    <button class="logo-img" onclick="window.location.href='index.php'">
                         <img src="/frontend/img/logo.png" alt="Logo" style="width: 50px; border:none"/>
                     </button>
                 </li>
                 <li class="nav-item active">
-                    <a class="nav-link" href="/index.php">Home <span class="sr-only">(current)</span></a>
+                    <a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a>
                 </li>
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <li class="nav-item">
@@ -90,7 +70,7 @@ if ($products_query) {
                             <a class="nav-link" href="admin.php">Product Manager</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="admin_user.php">User Manager</a>
+                            <a class="nav-link" href="admin_users.php">User Manager</a>
                         </li>
                     <?php endif; ?>
                 <?php else: ?>
@@ -136,18 +116,12 @@ if ($products_query) {
                     <div class="sidebar bg-light p-3">
                         <h4>Danh mục sản phẩm</h4>
                         <ul class="list-group">
-                            <?php if (empty($categories)): ?>
-                                <li class="list-group-item">Chưa có danh mục nào!</li>
-                            <?php else: ?>
-                                <?php foreach ($categories as $cat_id => $cat_name): ?>
-                                    <li class="list-group-item">
-                                        <a href="#category-<?php echo $cat_id; ?>">
-                                            <?php echo htmlspecialchars($cat_name); ?>
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                            <li class="list-group-item"><a href="#category-0">Sản phẩm khác</a></li>
+                            <?php foreach ($categories as $cat_id => $cat_name): ?>
+                                <li class="list-group-item">
+                                    <a href="#category-<?php echo $cat_id; ?>"><?php echo htmlspecialchars($cat_name); ?></a>
+                                </li>
+                            <?php endforeach; ?>
+                            <li class="list-group-item"><a href="#other">Sản phẩm khác</a></li>
                         </ul>
                     </div>
                 </div>
@@ -163,33 +137,26 @@ if ($products_query) {
                     </div>
 
                     <!-- Dynamic Product Sections -->
-                    <?php if (empty($products_by_category)): ?>
-                        <p class="text-center">Chưa có sản phẩm nào trong kho!</p>
-                    <?php else: ?>
-                        <?php foreach ($products_by_category as $category_id => $products): ?>
-                            <section id="category-<?php echo $category_id; ?>" class="mt-5">
-                                <h3><?php echo htmlspecialchars($categories[$category_id] ?? 'Sản phẩm khác'); ?></h3>
-                                <div class="row">
-                                    <?php foreach ($products as $product): ?>
-                                        <div class="col-md-4" style = "height: 450px;">         
-                                            <div class="card mb-4 ">
-                                                <img src="/uploads/<?php echo htmlspecialchars($product['image'] ?? 'default.png'); ?>" 
-                                                     class="card-img-top"   
-                                                     alt="<?php echo htmlspecialchars($product['name']); ?>" 
-                                                     style="width: 50%; margin: auto;">
-                                                <div class="card-body">
-                                                    <h5 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
-                                                    <p class="card-text">Giá: <?php echo number_format($product['price'], 0, ',', '.') ?> VNĐ</p>
-                                                    <button class="btn btn-success" onclick="addToCart(<?php echo $product['product_id']; ?>)">Thêm vào giỏ</button>
-                                                    <a href="product.php?product_id=<?php echo $product['product_id']; ?>" class="btn btn-info">Xem chi tiết</a>
-                                                </div>
+                    <?php foreach ($products_by_category as $category_id => $products): ?>
+                        <section id="category-<?php echo $category_id; ?>" class="mt-5">
+                            <h3><?php echo htmlspecialchars($categories[$category_id] ?? 'Sản phẩm khác'); ?></h3>
+                            <div class="row">
+                                <?php foreach ($products as $product): ?>
+                                    <div class="col-md-4">
+                                        <div class="card mb-4">
+                                            <img src="/uploads/<?php echo htmlspecialchars($product['image']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($product['name']); ?>" style="width: 50%; margin: auto;">
+                                            <div class="card-body">
+                                                <h5 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
+                                                <p class="card-text">Giá: <?php echo number_format($product['price'], 0, ',', '.') ?> VNĐ</p>
+                                                <button class="btn btn-success" onclick="addToCart(<?php echo $product['product_id']; ?>)">Thêm vào giỏ</button>
+                                                <a href="product.php?product_id=<?php echo $product['product_id']; ?>" class="btn btn-info">Xem chi tiết</a>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </section>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
@@ -199,7 +166,7 @@ if ($products_query) {
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
     <script>
-    let cartCount = <?php echo json_encode($cart_count); ?>;
+    let cartCount = <?php echo $cart_count; ?>;
 
     function addToCart(productId) {
         <?php if (isset($_SESSION['user_id'])): ?>

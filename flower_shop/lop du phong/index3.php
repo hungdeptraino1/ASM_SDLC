@@ -20,7 +20,7 @@ if (isset($_SESSION['user_id'])) {
     }
 }
 
-// Lấy danh sách danh mục từ database
+// Lấy danh sách danh mục từ database để hiển thị sản phẩm
 $categories = [];
 $categories_query = $conn->query("SELECT category_id, name FROM categories");
 if ($categories_query) {
@@ -43,7 +43,7 @@ if ($products_query) {
     $products_query->execute();
     $products_result = $products_query->get_result();
     while ($product = $products_result->fetch_assoc()) {
-        $category_id = $product['category_id'] ?? 0; // 0 cho sản phẩm không danh mục
+        $category_id = $product['category_id'] ?? 0;
         $products_by_category[$category_id][] = $product;
     }
     $products_query->close();
@@ -90,7 +90,7 @@ if ($products_query) {
                             <a class="nav-link" href="admin.php">Product Manager</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="admin_user.php">User Manager</a>
+                            <a class="nav-link" href="admin_users.php">User Manager</a>
                         </li>
                     <?php endif; ?>
                 <?php else: ?>
@@ -136,18 +136,13 @@ if ($products_query) {
                     <div class="sidebar bg-light p-3">
                         <h4>Danh mục sản phẩm</h4>
                         <ul class="list-group">
-                            <?php if (empty($categories)): ?>
-                                <li class="list-group-item">Chưa có danh mục nào!</li>
-                            <?php else: ?>
-                                <?php foreach ($categories as $cat_id => $cat_name): ?>
-                                    <li class="list-group-item">
-                                        <a href="#category-<?php echo $cat_id; ?>">
-                                            <?php echo htmlspecialchars($cat_name); ?>
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                            <li class="list-group-item"><a href="#category-0">Sản phẩm khác</a></li>
+                            <li class="list-group-item"><a href="#birthday-flowers">Hoa Sinh Nhật</a></li>
+                            <li class="list-group-item"><a href="#opening-flowers">Hoa Khai Trương</a></li>
+                            <li class="list-group-item"><a href="#theme">Chủ Đề</a></li>
+                            <li class="list-group-item"><a href="#giangsinh">Thiết Kế</a></li>
+                            <li class="list-group-item"><a href="#fresh-flowers">Hoa Tươi</a></li>
+                            <li class="list-group-item"><a href="#discounted-flowers">Hoa Tươi Giảm Giá lên đến 99%</a></li>
+                            <li class="list-group-item"><a href="#special-flowers">Hoa Đặc Biệt</a></li>
                         </ul>
                     </div>
                 </div>
@@ -167,14 +162,14 @@ if ($products_query) {
                         <p class="text-center">Chưa có sản phẩm nào trong kho!</p>
                     <?php else: ?>
                         <?php foreach ($products_by_category as $category_id => $products): ?>
-                            <section id="category-<?php echo $category_id; ?>" class="mt-5">
-                                <h3><?php echo htmlspecialchars($categories[$category_id] ?? 'Sản phẩm khác'); ?></h3>
+                            <section id="<?php echo $category_id == 0 ? 'special-flowers' : strtolower(str_replace(' ', '-', $categories[$category_id])); ?>" class="mt-5">
+                                <h3><?php echo htmlspecialchars($categories[$category_id] ?? 'Hoa Đặc Biệt'); ?></h3>
                                 <div class="row">
                                     <?php foreach ($products as $product): ?>
-                                        <div class="col-md-4" style = "height: 450px;">         
-                                            <div class="card mb-4 ">
+                                        <div class="col-md-4">
+                                            <div class="card mb-4">
                                                 <img src="/uploads/<?php echo htmlspecialchars($product['image'] ?? 'default.png'); ?>" 
-                                                     class="card-img-top"   
+                                                     class="card-img-top" 
                                                      alt="<?php echo htmlspecialchars($product['name']); ?>" 
                                                      style="width: 50%; margin: auto;">
                                                 <div class="card-body">

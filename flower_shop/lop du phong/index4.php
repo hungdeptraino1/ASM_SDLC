@@ -43,13 +43,24 @@ if ($products_query) {
     $products_query->execute();
     $products_result = $products_query->get_result();
     while ($product = $products_result->fetch_assoc()) {
-        $category_id = $product['category_id'] ?? 0; // 0 cho sản phẩm không danh mục
+        $category_id = $product['category_id'] ?? 0;
         $products_by_category[$category_id][] = $product;
     }
     $products_query->close();
 } else {
     error_log("Lỗi chuẩn bị truy vấn products: " . $conn->error);
 }
+
+// Danh sách danh mục tĩnh từ sidebar
+$static_categories = [
+    'birthday-flowers' => 'Hoa Sinh Nhật',
+    'opening-flowers' => 'Hoa Khai Trương',
+    'theme' => 'Chủ Đề',
+    'giangsinh' => 'Thiết Kế',
+    'fresh-flowers' => 'Hoa Tươi',
+    'discounted-flowers' => 'Hoa Tươi Giảm Giá lên đến 99%',
+    'special-flowers' => 'Hoa Đặc Biệt'
+];
 ?>
 
 <!DOCTYPE html>
@@ -90,7 +101,7 @@ if ($products_query) {
                             <a class="nav-link" href="admin.php">Product Manager</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="admin_user.php">User Manager</a>
+                            <a class="nav-link" href="admin_users.php">User Manager</a>
                         </li>
                     <?php endif; ?>
                 <?php else: ?>
@@ -136,18 +147,13 @@ if ($products_query) {
                     <div class="sidebar bg-light p-3">
                         <h4>Danh mục sản phẩm</h4>
                         <ul class="list-group">
-                            <?php if (empty($categories)): ?>
-                                <li class="list-group-item">Chưa có danh mục nào!</li>
-                            <?php else: ?>
-                                <?php foreach ($categories as $cat_id => $cat_name): ?>
-                                    <li class="list-group-item">
-                                        <a href="#category-<?php echo $cat_id; ?>">
-                                            <?php echo htmlspecialchars($cat_name); ?>
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                            <li class="list-group-item"><a href="#category-0">Sản phẩm khác</a></li>
+                            <li class="list-group-item"><a href="#birthday-flowers">Hoa Sinh Nhật</a></li>
+                            <li class="list-group-item"><a href="#opening-flowers">Hoa Khai Trương</a></li>
+                            <li class="list-group-item"><a href="#theme">Chủ Đề</a></li>
+                            <li class="list-group-item"><a href="#giangsinh">Thiết Kế</a></li>
+                            <li class="list-group-item"><a href="#fresh-flowers">Hoa Tươi</a></li>
+                            <li class="list-group-item"><a href="#discounted-flowers">Hoa Tươi Giảm Giá lên đến 99%</a></li>
+                            <li class="list-group-item"><a href="#special-flowers">Hoa Đặc Biệt</a></li>
                         </ul>
                     </div>
                 </div>
@@ -163,18 +169,22 @@ if ($products_query) {
                     </div>
 
                     <!-- Dynamic Product Sections -->
-                    <?php if (empty($products_by_category)): ?>
-                        <p class="text-center">Chưa có sản phẩm nào trong kho!</p>
-                    <?php else: ?>
-                        <?php foreach ($products_by_category as $category_id => $products): ?>
-                            <section id="category-<?php echo $category_id; ?>" class="mt-5">
-                                <h3><?php echo htmlspecialchars($categories[$category_id] ?? 'Sản phẩm khác'); ?></h3>
+                    <?php foreach ($static_categories as $section_id => $section_name): ?>
+                        <section id="<?php echo $section_id; ?>" class="mt-5">
+                            <h3><?php echo htmlspecialchars($section_name); ?></h3>
+                            <?php
+                            $found_products = false;
+                            foreach ($products_by_category as $category_id => $products) {
+                                if (strtolower($categories[$category_id] ?? '') === strtolower($section_name) || 
+                                    ($section_id === 'special-flowers' && $category_id == 0)) {
+                                    $found_products = true;
+                            ?>
                                 <div class="row">
                                     <?php foreach ($products as $product): ?>
-                                        <div class="col-md-4" style = "height: 450px;">         
-                                            <div class="card mb-4 ">
+                                        <div class="col-md-4">
+                                            <div class="card mb-4">
                                                 <img src="/uploads/<?php echo htmlspecialchars($product['image'] ?? 'default.png'); ?>" 
-                                                     class="card-img-top"   
+                                                     class="card-img-top" 
                                                      alt="<?php echo htmlspecialchars($product['name']); ?>" 
                                                      style="width: 50%; margin: auto;">
                                                 <div class="card-body">
@@ -187,9 +197,15 @@ if ($products_query) {
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
-                            </section>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                            <?php
+                                    break;
+                                }
+                            }
+                            if (!$found_products): ?>
+                                <p class="text-center">Chưa có sản phẩm nào trong danh mục này!</p>
+                            <?php endif; ?>
+                        </section>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
